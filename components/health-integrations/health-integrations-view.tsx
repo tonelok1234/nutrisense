@@ -228,70 +228,88 @@ export default function HealthIntegrationsView() {
   const [integrations, setIntegrations] = useState(initialIntegrations)
   const [expandedId, setExpandedId] = useState<string | null>("apple-health")
   const [activeCategory, setActiveCategory] = useState<string>("wearables")
-  const [stravaAthleteName, setStravaAthleteName] = useState<string | null>(null)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const [dbIntegrations, setDbIntegrations] = useState<Record<string, any>>({})
+  const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  // Integrations with real OAuth flows
+  const REAL_INTEGRATIONS = ["strava", "dexcom"]
+  // Integrations that require hardware/subscription (placeholders)
+  const PLACEHOLDER_INTEGRATIONS = ["garmin", "oura", "whoop", "stelo"]
+
+  const SYNC_LABELS: Record<string, string> = {
+    strava: "aktivitetar",
+    dexcom: "glukosmålingar",
+  }
+
+  const CONNECT_LABELS: Record<string, string> = {
+    strava: "Strava",
+    dexcom: "Dexcom CGM",
+  }
 
   useEffect(() => {
-    // Check Strava connection status from database
     fetch("/api/integrations")
       .then(r => r.json())
       .then((data: any[]) => {
-        const strava = data?.find((i: any) => i.integration_type === "strava" && i.is_active)
-        if (strava) {
-          setIntegrations(prev => prev.map(i =>
-            i.id === "strava" ? { ...i, connected: true } : i
-          ))
-          setStravaAthleteName(strava.settings?.athlete_name ?? null)
+        const details: Record<string, any> = {}
+        for (const item of (data ?? [])) {
+          if (item.is_active) details[item.integration_type] = item
         }
+        setDbIntegrations(details)
+        setIntegrations(prev => prev.map(i => ({
+          ...i,
+          connected: REAL_INTEGRATIONS.includes(i.id) ? !!details[i.id] : i.connected,
+        })))
       })
       .catch(() => {})
 
-    // Handle callback params
     const params = new URLSearchParams(window.location.search)
-    if (params.get("strava_connected") === "1") {
-      setSyncMessage("Strava er no kopla til!")
-      setActiveCategory("fitness")
-      window.history.replaceState({}, "", window.location.pathname)
-    } else if (params.get("strava_error")) {
-      setSyncMessage(`Tilkopling feila: ${params.get("strava_error")}`)
-      window.history.replaceState({}, "", window.location.pathname)
+    for (const id of REAL_INTEGRATIONS) {
+      if (params.get(`${id}_connected`) === "1") {
+        setMessage(`${CONNECT_LABELS[id]} er no kopla til!`)
+        if (id === "strava") setActiveCategory("fitness")
+        if (id === "dexcom") setActiveCategory("glucose")
+        window.history.replaceState({}, "", window.location.pathname)
+        break
+      }
+      if (params.get(`${id}_error`)) {
+        setMessage(`Tilkopling feila: ${params.get(`${id}_error`)}`)
+        window.history.replaceState({}, "", window.location.pathname)
+        break
+      }
     }
   }, [])
 
-  const handleStravaSync = async () => {
-    setIsSyncing(true)
-    setSyncMessage(null)
+  const handleSync = async (integrationId: string) => {
+    setSyncingId(integrationId)
+    setMessage(null)
     try {
-      const res = await fetch("/api/integrations/strava/sync", { method: "POST" })
+      const res = await fetch(`/api/integrations/${integrationId}/sync`, { method: "POST" })
       const data = await res.json()
       if (res.ok) {
-        setSyncMessage(`Synkronisert ${data.synced} nye aktivitetar`)
+        setMessage(`Synkronisert ${data.synced} nye ${SYNC_LABELS[integrationId] ?? "oppføringar"}`)
       } else {
-        setSyncMessage(`Feil: ${data.error}`)
+        setMessage(`Feil: ${data.error}`)
       }
     } catch {
-      setSyncMessage("Synkronisering feila")
+      setMessage("Synkronisering feila")
     } finally {
-      setIsSyncing(false)
+      setSyncingId(null)
     }
   }
 
-  const handleStravaDisconnect = async () => {
-    await fetch("/api/integrations?type=strava", { method: "DELETE" })
+  const handleDisconnect = async (integrationId: string) => {
+    await fetch(`/api/integrations?type=${integrationId}`, { method: "DELETE" })
     setIntegrations(prev => prev.map(i =>
-      i.id === "strava" ? { ...i, connected: false } : i
+      i.id === integrationId ? { ...i, connected: false } : i
     ))
-    setStravaAthleteName(null)
-    setSyncMessage("Strava fråkopla")
+    setDbIntegrations(prev => { const next = { ...prev }; delete next[integrationId]; return next })
+    setMessage(`${CONNECT_LABELS[integrationId] ?? integrationId} fråkopla`)
   }
 
   const toggleConnection = (integrationId: string) => {
-    if (integrationId === "strava") return // handled separately
-    if (integrationId === "garmin") return // requires API approval
-    if (integrationId === "oura") return // requires Oura Ring
-    if (integrationId === "whoop") return // requires WHOOP subscription
-    if (integrationId === "stelo") return // requires Stelo sensor
+    if (REAL_INTEGRATIONS.includes(integrationId)) return
+    if (PLACEHOLDER_INTEGRATIONS.includes(integrationId)) return
     setIntegrations((prev) =>
       prev.map((integration) =>
         integration.id === integrationId ? { ...integration, connected: !integration.connected } : integration,
@@ -333,9 +351,9 @@ export default function HealthIntegrationsView() {
             {connectedCount} of {integrations.length} connected
           </Badge>
         </div>
-        {syncMessage && (
+        {message && (
           <div className="mt-3 text-sm px-3 py-2 rounded-md bg-primary/10 text-primary w-fit">
-            {syncMessage}
+            {message}
           </div>
         )}
       </div>
@@ -387,41 +405,32 @@ export default function HealthIntegrationsView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  {integration.id === "whoop" || integration.id === "stelo" ? (
+                  {PLACEHOLDER_INTEGRATIONS.includes(integration.id) ? (
                     <div onClick={e => e.stopPropagation()}>
                       <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
-                        Krev {integration.id === "whoop" ? "WHOOP" : "Stelo-sensor"}
+                        {integration.id === "garmin" ? "Krev API-godkjenning"
+                          : integration.id === "oura" ? "Krev Oura Ring"
+                          : integration.id === "whoop" ? "Krev WHOOP"
+                          : "Krev Stelo-sensor"}
                       </Badge>
                     </div>
-                  ) : integration.id === "garmin" ? (
-                    <div onClick={e => e.stopPropagation()}>
-                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
-                        Krev API-godkjenning
-                      </Badge>
-                    </div>
-                  ) : integration.id === "oura" ? (
-                    <div onClick={e => e.stopPropagation()}>
-                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
-                        Krev Oura Ring
-                      </Badge>
-                    </div>
-                  ) : integration.id === "strava" ? (
+                  ) : REAL_INTEGRATIONS.includes(integration.id) ? (
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       {integration.connected ? (
                         <>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={handleStravaSync}
-                            disabled={isSyncing}
+                            onClick={() => handleSync(integration.id)}
+                            disabled={syncingId === integration.id}
                           >
-                            <RefreshCw className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")} />
+                            <RefreshCw className={cn("h-3 w-3 mr-1", syncingId === integration.id && "animate-spin")} />
                             Synkroniser
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={handleStravaDisconnect}
+                            onClick={() => handleDisconnect(integration.id)}
                           >
                             <LogOut className="h-3 w-3 mr-1" />
                             Koble frå
@@ -429,8 +438,8 @@ export default function HealthIntegrationsView() {
                         </>
                       ) : (
                         <Button size="sm" asChild>
-                          <a href="/api/integrations/strava/connect">
-                            Koble til Strava
+                          <a href={`/api/integrations/${integration.id}/connect`}>
+                            Koble til {CONNECT_LABELS[integration.id]}
                           </a>
                         </Button>
                       )}
@@ -503,9 +512,14 @@ export default function HealthIntegrationsView() {
                       </a>
                     </div>
                   )}
-                  {integration.id === "strava" && stravaAthleteName && (
+                  {REAL_INTEGRATIONS.includes(integration.id) && dbIntegrations[integration.id] && (
                     <p className="text-xs text-muted-foreground mb-3">
-                      Kopla til som: <span className="font-medium">{stravaAthleteName}</span>
+                      {integration.id === "strava" && dbIntegrations.strava?.settings?.athlete_name && (
+                        <>Kopla til som: <span className="font-medium">{dbIntegrations.strava.settings.athlete_name}</span></>
+                      )}
+                      {integration.id === "dexcom" && (
+                        <>Sist synkronisert: <span className="font-medium">{new Date(dbIntegrations.dexcom.last_synced_at).toLocaleString("no-NO")}</span></>
+                      )}
                     </p>
                   )}
                   <h4 className="text-sm font-medium mb-3">Data Categories to Sync</h4>
