@@ -124,19 +124,6 @@ const initialIntegrations: Integration[] = [
       { id: "power", label: "Power Data", enabled: false },
     ],
   },
-  {
-    id: "peloton",
-    name: "Peloton",
-    description: "Cycling, running, and strength workout data",
-    icon: <Dumbbell className="h-6 w-6" />,
-    connected: false,
-    category: "fitness",
-    dataCategories: [
-      { id: "workouts", label: "Workout History", enabled: true },
-      { id: "output", label: "Output & Metrics", enabled: true },
-      { id: "calories", label: "Calories Burned", enabled: true },
-    ],
-  },
   // Glucose Monitors
   {
     id: "dexcom",
