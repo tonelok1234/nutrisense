@@ -153,20 +153,6 @@ const initialIntegrations: Integration[] = [
       { id: "insights", label: "Metabolic Insights", enabled: true },
     ],
   },
-  {
-    id: "levels",
-    name: "Levels Health",
-    description: "Metabolic health insights powered by CGM data",
-    icon: <Activity className="h-6 w-6" />,
-    connected: false,
-    category: "glucose",
-    dataCategories: [
-      { id: "metabolicscore", label: "Metabolic Score", enabled: true },
-      { id: "zonescores", label: "Zone Scores", enabled: true },
-      { id: "glucose", label: "Glucose Data", enabled: true },
-      { id: "insights", label: "AI Insights", enabled: true },
-    ],
-  },
 ]
 
 const categoryLabels = {
