@@ -19,7 +19,6 @@ import {
   WifiOff,
   ChevronRight,
   Droplet,
-  Footprints,
   Moon,
   Dumbbell,
   RefreshCw,
@@ -86,7 +85,7 @@ const initialIntegrations: Integration[] = [
   {
     id: "whoop",
     name: "WHOOP",
-    description: "Strain, recovery, and sleep performance tracking",
+    description: "Strain, recovery og søvnprestasjon – krev WHOOP-abonnement",
     icon: <Activity className="h-6 w-6" />,
     connected: false,
     category: "wearables",
@@ -126,20 +125,6 @@ const initialIntegrations: Integration[] = [
     ],
   },
   // Fitness Apps
-  {
-    id: "google-fit",
-    name: "Google Fit",
-    description: "Activity and health data from Android devices",
-    icon: <Footprints className="h-6 w-6" />,
-    connected: false,
-    category: "fitness",
-    dataCategories: [
-      { id: "steps", label: "Steps & Distance", enabled: true },
-      { id: "activity", label: "Activity Minutes", enabled: true },
-      { id: "heartrate", label: "Heart Rate", enabled: true },
-      { id: "calories", label: "Calories Burned", enabled: true },
-    ],
-  },
   {
     id: "fitbit",
     name: "Fitbit",
@@ -200,7 +185,7 @@ const initialIntegrations: Integration[] = [
   {
     id: "stelo",
     name: "Stelo by Dexcom",
-    description: "Over-the-counter CGM for metabolic health awareness",
+    description: "Reseptfri CGM for metabolsk helseovervaking – krev Stelo-sensor",
     icon: <Droplet className="h-6 w-6" />,
     connected: false,
     category: "glucose",
@@ -209,20 +194,6 @@ const initialIntegrations: Integration[] = [
       { id: "trends", label: "Glucose Patterns", enabled: true },
       { id: "meals", label: "Meal Response", enabled: true },
       { id: "insights", label: "Metabolic Insights", enabled: true },
-    ],
-  },
-  {
-    id: "freestyle-libre",
-    name: "FreeStyle Libre",
-    description: "Abbott's flash glucose monitoring system",
-    icon: <Droplet className="h-6 w-6" />,
-    connected: false,
-    category: "glucose",
-    dataCategories: [
-      { id: "glucose", label: "Glucose Readings", enabled: true },
-      { id: "trends", label: "Glucose Trends", enabled: true },
-      { id: "timeinrange", label: "Time in Range", enabled: true },
-      { id: "reports", label: "AGP Reports", enabled: false },
     ],
   },
   {
@@ -319,6 +290,8 @@ export default function HealthIntegrationsView() {
     if (integrationId === "strava") return // handled separately
     if (integrationId === "garmin") return // requires API approval
     if (integrationId === "oura") return // requires Oura Ring
+    if (integrationId === "whoop") return // requires WHOOP subscription
+    if (integrationId === "stelo") return // requires Stelo sensor
     setIntegrations((prev) =>
       prev.map((integration) =>
         integration.id === integrationId ? { ...integration, connected: !integration.connected } : integration,
@@ -414,7 +387,13 @@ export default function HealthIntegrationsView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  {integration.id === "garmin" ? (
+                  {integration.id === "whoop" || integration.id === "stelo" ? (
+                    <div onClick={e => e.stopPropagation()}>
+                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                        Krev {integration.id === "whoop" ? "WHOOP" : "Stelo-sensor"}
+                      </Badge>
+                    </div>
+                  ) : integration.id === "garmin" ? (
                     <div onClick={e => e.stopPropagation()}>
                       <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
                         Krev API-godkjenning
@@ -476,6 +455,26 @@ export default function HealthIntegrationsView() {
             {expandedId === integration.id && (
               <CardContent className="pt-0">
                 <div className="border-t pt-4">
+                  {(integration.id === "whoop" || integration.id === "stelo") && (
+                    <div className="mb-4 p-3 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
+                      <p className="font-medium mb-1">
+                        Krev {integration.id === "whoop" ? "WHOOP-abonnement" : "Stelo-sensor"}
+                      </p>
+                      <p className="mb-2">
+                        {integration.id === "whoop"
+                          ? "For å koble til WHOOP treng du eit aktivt WHOOP-abonnement. Integrasjonen er klar til bruk når du har eit abonnement."
+                          : "For å koble til Stelo treng du ein fysisk Stelo-sensor frå Dexcom. Integrasjonen er klar til bruk når du har sensoren."}
+                      </p>
+                      <a
+                        href={integration.id === "whoop" ? "https://www.whoop.com" : "https://www.stelo.com"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-medium"
+                      >
+                        Les meir om {integration.id === "whoop" ? "WHOOP" : "Stelo"} →
+                      </a>
+                    </div>
+                  )}
                   {integration.id === "garmin" && (
                     <div className="mb-4 p-3 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
                       <p className="font-medium mb-1">Garmin API krev godkjenning</p>
