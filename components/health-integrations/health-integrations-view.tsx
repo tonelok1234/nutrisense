@@ -57,9 +57,9 @@ const initialIntegrations: Integration[] = [
   {
     id: "garmin",
     name: "Garmin Connect",
-    description: "Sync heart rate, HRV, stress levels, and activity data",
+    description: "Synkroniser puls, HRV, stressnivå og aktivitetsdata",
     icon: <Watch className="h-6 w-6" />,
-    connected: true,
+    connected: false,
     category: "wearables",
     dataCategories: [
       { id: "hrv", label: "Heart Rate Variability", enabled: true },
@@ -317,6 +317,7 @@ export default function HealthIntegrationsView() {
 
   const toggleConnection = (integrationId: string) => {
     if (integrationId === "strava") return // handled separately
+    if (integrationId === "garmin") return // requires API approval
     setIntegrations((prev) =>
       prev.map((integration) =>
         integration.id === integrationId ? { ...integration, connected: !integration.connected } : integration,
@@ -412,7 +413,13 @@ export default function HealthIntegrationsView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  {integration.id === "strava" ? (
+                  {integration.id === "garmin" ? (
+                    <div onClick={e => e.stopPropagation()}>
+                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                        Krev API-godkjenning
+                      </Badge>
+                    </div>
+                  ) : integration.id === "strava" ? (
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       {integration.connected ? (
                         <>
@@ -462,6 +469,20 @@ export default function HealthIntegrationsView() {
             {expandedId === integration.id && (
               <CardContent className="pt-0">
                 <div className="border-t pt-4">
+                  {integration.id === "garmin" && (
+                    <div className="mb-4 p-3 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
+                      <p className="font-medium mb-1">Garmin API krev godkjenning</p>
+                      <p className="mb-2">For å koble til Garmin Connect må applikasjonen godkjennast av Garmin. Dette er under arbeid.</p>
+                      <a
+                        href="https://developer.garmin.com/gc-developer-program/overview/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-medium"
+                      >
+                        Les meir om Garmin Developer Program →
+                      </a>
+                    </div>
+                  )}
                   {integration.id === "strava" && stravaAthleteName && (
                     <p className="text-xs text-muted-foreground mb-3">
                       Kopla til som: <span className="font-medium">{stravaAthleteName}</span>
