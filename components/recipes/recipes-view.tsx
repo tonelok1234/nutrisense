@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Sparkles, Clock, Users, ChefHat, Coffee, Sun, Moon, Cookie, Filter, X, Plus } from "lucide-react"
+import { Search, Sparkles, Clock, Users, ChefHat, Coffee, Sun, Moon, Cookie, Filter, X, Plus, Loader2 } from "lucide-react"
 import GenerateRecipeDialog from "./generate-recipe-dialog"
 import CreateRecipeDialog from "./create-recipe-dialog"
 
@@ -32,176 +32,6 @@ const diets = [
   { value: "fodmap", label: "Lav-FODMAP" },
 ]
 
-const mockRecipes = {
-  breakfast: [
-    {
-      id: "b1",
-      title: "Havregraut med bær",
-      description: "Kremet havregraut med friske bær og honning",
-      prep_time: 10,
-      servings: 2,
-      calories: 320,
-      tags: ["vegetarian", "glutenfree"],
-      image: "/oatmeal-with-berries.png",
-    },
-    {
-      id: "b2",
-      title: "Eggerøre med avokado",
-      description: "Fluffy eggerøre med kremet avokado og tomatar",
-      prep_time: 15,
-      servings: 2,
-      calories: 380,
-      tags: ["keto", "lowcarb", "glutenfree"],
-      image: "/scrambled-eggs-avocado.jpg",
-    },
-    {
-      id: "b3",
-      title: "Smoothie bowl",
-      description: "Fargerik smoothie bowl med frukt og granola",
-      prep_time: 10,
-      servings: 1,
-      calories: 290,
-      tags: ["vegan", "vegetarian"],
-      image: "/smoothie-bowl-fruit.jpg",
-    },
-    {
-      id: "b4",
-      title: "Pannekaker med banan",
-      description: "Sunne pannekaker med banan og ahornsirup",
-      prep_time: 20,
-      servings: 4,
-      calories: 350,
-      tags: ["vegetarian"],
-      image: "/banana-pancakes.jpg",
-    },
-  ],
-  lunch: [
-    {
-      id: "l1",
-      title: "Kyllingsalat med quinoa",
-      description: "Proteinrik salat med grilla kylling og quinoa",
-      prep_time: 25,
-      servings: 2,
-      calories: 450,
-      tags: ["glutenfree", "mediterranean"],
-      image: "/chicken-quinoa-salad.png",
-    },
-    {
-      id: "l2",
-      title: "Avokado wrap",
-      description: "Frisk wrap med avokado, hummus og grønsaker",
-      prep_time: 15,
-      servings: 2,
-      calories: 380,
-      tags: ["vegan", "vegetarian"],
-      image: "/avocado-wrap.jpg",
-    },
-    {
-      id: "l3",
-      title: "Laksepoké bowl",
-      description: "Asiatisk-inspirert bowl med fersk laks og ris",
-      prep_time: 20,
-      servings: 2,
-      calories: 520,
-      tags: ["glutenfree", "dairyfree"],
-      image: "/salmon-poke-bowl.png",
-    },
-    {
-      id: "l4",
-      title: "Tomatsupppe",
-      description: "Varmande tomatsuppe med basilikum",
-      prep_time: 30,
-      servings: 4,
-      calories: 180,
-      tags: ["vegan", "vegetarian", "glutenfree"],
-      image: "/tomato-soup-basil.jpg",
-    },
-  ],
-  dinner: [
-    {
-      id: "d1",
-      title: "Laks med grønsaker",
-      description: "Ovnsbakt laks med sesonggrønsaker",
-      prep_time: 35,
-      servings: 4,
-      calories: 480,
-      tags: ["keto", "lowcarb", "glutenfree", "paleo"],
-      image: "/baked-salmon-vegetables.png",
-    },
-    {
-      id: "d2",
-      title: "Pasta primavera",
-      description: "Italiensk pasta med friske grønsaker",
-      prep_time: 30,
-      servings: 4,
-      calories: 420,
-      tags: ["vegetarian", "mediterranean"],
-      image: "/pasta-primavera.png",
-    },
-    {
-      id: "d3",
-      title: "Kylling tikka masala",
-      description: "Krydra indisk kyllingrett med ris",
-      prep_time: 45,
-      servings: 4,
-      calories: 550,
-      tags: ["glutenfree"],
-      image: "/chicken-tikka-masala.png",
-    },
-    {
-      id: "d4",
-      title: "Vegetar curry",
-      description: "Kremet curry med kikerter og spinat",
-      prep_time: 40,
-      servings: 4,
-      calories: 380,
-      tags: ["vegan", "vegetarian", "glutenfree"],
-      image: "/vegetable-curry.png",
-    },
-  ],
-  snacks: [
-    {
-      id: "s1",
-      title: "Energikuler",
-      description: "Sunne energikuler med dadlar og nøtter",
-      prep_time: 15,
-      servings: 12,
-      calories: 85,
-      tags: ["vegan", "glutenfree", "paleo"],
-      image: "/energy-balls-dates.jpg",
-    },
-    {
-      id: "s2",
-      title: "Gresk yoghurt med honning",
-      description: "Kremet yoghurt med honning og valnøtter",
-      prep_time: 5,
-      servings: 1,
-      calories: 180,
-      tags: ["vegetarian", "glutenfree"],
-      image: "/greek-yogurt-honey.jpg",
-    },
-    {
-      id: "s3",
-      title: "Hummus med grønsaker",
-      description: "Heimelaga hummus med sprø grønsaker",
-      prep_time: 15,
-      servings: 4,
-      calories: 120,
-      tags: ["vegan", "glutenfree"],
-      image: "/hummus-vegetables.jpg",
-    },
-    {
-      id: "s4",
-      title: "Frukt og nøttebar",
-      description: "Heimelaga bar med tørka frukt og nøtter",
-      prep_time: 20,
-      servings: 8,
-      calories: 150,
-      tags: ["vegan", "glutenfree"],
-      image: "/fruit-nut-bar.jpg",
-    },
-  ],
-}
 
 export default function RecipesView({ recipes, userId }: RecipesViewProps) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -210,39 +40,52 @@ export default function RecipesView({ recipes, userId }: RecipesViewProps) {
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [activeTab, setActiveTab] = useState("breakfast")
+  const [mealdbRecipes, setMealdbRecipes] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  const fetchTab = useCallback(async (tab: string, search?: string) => {
+    setIsLoading(true)
+    try {
+      const url = search
+        ? `/api/themealdb?search=${encodeURIComponent(search)}`
+        : `/api/themealdb?tab=${tab}`
+      const res = await fetch(url)
+      const data = await res.json()
+      setMealdbRecipes(data.meals || [])
+    } catch {
+      setMealdbRecipes([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchTab(activeTab)
+  }, [activeTab, fetchTab])
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        fetchTab(activeTab, searchQuery)
+      } else if (searchQuery === "") {
+        fetchTab(activeTab)
+      }
+    }, 400)
+    return () => clearTimeout(delay)
+  }, [searchQuery, activeTab, fetchTab])
 
   const filterRecipes = (recipeList: any[]) => {
     let filtered = recipeList
-
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (recipe) =>
-          recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          recipe.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    }
-
-    // Filter by diet
     if (selectedDiet !== "all") {
-      filtered = filtered.filter((recipe) => recipe.tags?.includes(selectedDiet))
+      filtered = filtered.filter((r) => r.tags?.includes(selectedDiet))
     }
-
-    // Filter by excluded ingredients
     if (excludedIngredients.trim()) {
-      const excluded = excludedIngredients
-        .toLowerCase()
-        .split(",")
-        .map((i) => i.trim())
+      const excluded = excludedIngredients.toLowerCase().split(",").map((i) => i.trim())
       filtered = filtered.filter(
-        (recipe) =>
-          !excluded.some(
-            (ingredient) =>
-              recipe.title.toLowerCase().includes(ingredient) || recipe.description?.toLowerCase().includes(ingredient),
-          ),
+        (r) => !excluded.some((ing) => r.title.toLowerCase().includes(ing))
       )
     }
-
     return filtered
   }
 
@@ -406,7 +249,7 @@ export default function RecipesView({ recipes, userId }: RecipesViewProps) {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="breakfast" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 h-auto">
           <TabsTrigger value="breakfast" className="text-xs sm:text-sm py-2 px-1 sm:px-3 gap-1">
             <Coffee className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
@@ -426,109 +269,31 @@ export default function RecipesView({ recipes, userId }: RecipesViewProps) {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="breakfast" className="mt-4 sm:mt-6">
-          {filterRecipes(mockRecipes.breakfast).length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filterRecipes(mockRecipes.breakfast).map((recipe) => (
-                <RecipeGridCard key={recipe.id} recipe={recipe} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Coffee className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">Ingen frukostoppskrifter funne med valde filter</p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedDiet("all")
-                    setExcludedIngredients("")
-                  }}
-                >
-                  Nullstill filter
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="lunch" className="mt-4 sm:mt-6">
-          {filterRecipes(mockRecipes.lunch).length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filterRecipes(mockRecipes.lunch).map((recipe) => (
-                <RecipeGridCard key={recipe.id} recipe={recipe} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Sun className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">Ingen lunsjoppskrifter funne med valde filter</p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedDiet("all")
-                    setExcludedIngredients("")
-                  }}
-                >
-                  Nullstill filter
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="dinner" className="mt-4 sm:mt-6">
-          {filterRecipes(mockRecipes.dinner).length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filterRecipes(mockRecipes.dinner).map((recipe) => (
-                <RecipeGridCard key={recipe.id} recipe={recipe} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Moon className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">Ingen middagsoppskrifter funne med valde filter</p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedDiet("all")
-                    setExcludedIngredients("")
-                  }}
-                >
-                  Nullstill filter
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="snacks" className="mt-4 sm:mt-6">
-          {filterRecipes(mockRecipes.snacks).length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filterRecipes(mockRecipes.snacks).map((recipe) => (
-                <RecipeGridCard key={recipe.id} recipe={recipe} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Cookie className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">Ingen snacks-oppskrifter funne med valde filter</p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedDiet("all")
-                    setExcludedIngredients("")
-                  }}
-                >
-                  Nullstill filter
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+        {["breakfast", "lunch", "dinner", "snacks"].map((tab) => (
+          <TabsContent key={tab} value={tab} className="mt-4 sm:mt-6">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : filterRecipes(mealdbRecipes).length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filterRecipes(mealdbRecipes).map((recipe) => (
+                  <RecipeGridCard key={recipe.id} recipe={recipe} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <ChefHat className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground mb-4">Ingen oppskrifter funne</p>
+                  <Button variant="outline" onClick={() => { setSelectedDiet("all"); setExcludedIngredients(""); setSearchQuery("") }}>
+                    Nullstill filter
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        ))}
       </Tabs>
 
       <GenerateRecipeDialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen} />

@@ -1,6 +1,7 @@
 "use server"
 
 import { generateObject } from "ai"
+import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 
@@ -44,7 +45,7 @@ export async function generateRecipe({ prompt }: { prompt: string }) {
 
   try {
     const { object: recipe } = await generateObject({
-      model: "openai/gpt-4o",
+      model: openai("gpt-4o"),
       schema: recipeSchema,
       prompt: `Generate a detailed recipe based on this request: ${prompt}. Make it healthy, practical, and include accurate nutritional information per serving.`,
     })
@@ -128,7 +129,7 @@ export async function generateMealPlan({
     })
 
     const { object: plan } = await generateObject({
-      model: "openai/gpt-4o",
+      model: openai("gpt-4o"),
       schema: mealPlanSchema,
       prompt: `Create a ${days}-day meal plan with breakfast, lunch, and dinner for each day. ${preferences ? `User preferences: ${preferences}` : ""} Make it balanced, varied, and nutritious.`,
     })

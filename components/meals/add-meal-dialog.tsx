@@ -181,56 +181,41 @@ export default function AddMealDialog({
     handleBarcodeSearchWithValue(detectedBarcode)
   }
 
-  const handleBarcodeSearchWithValue = (value: string) => {
-    const mockProducts: Record<string, any> = {
-      "7038010000508": { name: "Tine Lettmelk 1L", calories: 46, protein: 3.5, carbs: 4.8, fat: 1.2, per: "100ml" },
-      "7037203629502": { name: "Grandiosa Original", calories: 220, protein: 9, carbs: 26, fat: 9, per: "100g" },
-      "7622210449283": { name: "Freia Melkesjokolade", calories: 530, protein: 7, carbs: 58, fat: 30, per: "100g" },
-      "5701977000014": { name: "Skyr Naturell", calories: 63, protein: 11, carbs: 4, fat: 0.2, per: "100g" },
+  const handleBarcodeSearchWithValue = async (value: string) => {
+    setIsSearchingBarcode(true)
+    try {
+      const res = await fetch(`/api/food-search?barcode=${encodeURIComponent(value)}`)
+      const data = await res.json()
+      if (data.product) {
+        setBarcodeProduct({ ...data.product, per: data.product.serving_size || "100g" })
+      } else {
+        setBarcodeProduct({ name: `Produkt ${value}`, calories: 0, protein: 0, carbs: 0, fat: 0, per: "100g" })
+      }
+    } catch {
+      setBarcodeProduct({ name: `Produkt ${value}`, calories: 0, protein: 0, carbs: 0, fat: 0, per: "100g" })
+    } finally {
+      setIsSearchingBarcode(false)
     }
-
-    const product = mockProducts[value] || {
-      name: `Produkt ${value}`,
-      calories: 150,
-      protein: 5,
-      carbs: 20,
-      fat: 6,
-      per: "100g",
-    }
-
-    setBarcodeProduct(product)
-    setIsSearchingBarcode(false)
   }
 
   const handleBarcodeSearch = async () => {
     if (!barcodeValue.trim()) return
-
-    setIsSearchingBarcode(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    handleBarcodeSearchWithValue(barcodeValue)
+    await handleBarcodeSearchWithValue(barcodeValue)
   }
 
   const handleAutoFillSearch = async () => {
     if (!autoFillQuery.trim()) return
 
     setIsSearchingAutoFill(true)
-    await new Promise((resolve) => setTimeout(resolve, 800))
-
-    const mockFoods = [
-      { id: 1, name: "Havregrøt med blåbær", calories: 285, protein: 8, carbs: 45, fat: 7 },
-      { id: 2, name: "Havregrøt med banan", calories: 310, protein: 9, carbs: 52, fat: 6 },
-      { id: 3, name: "Havregrøt med honning", calories: 295, protein: 7, carbs: 50, fat: 5 },
-      { id: 4, name: "Eggerøre med bacon", calories: 380, protein: 22, carbs: 3, fat: 31 },
-      { id: 5, name: "Laks med grønsaker", calories: 420, protein: 35, carbs: 15, fat: 24 },
-      { id: 6, name: "Kylling med ris", calories: 450, protein: 38, carbs: 42, fat: 12 },
-      { id: 7, name: "Pasta Bolognese", calories: 520, protein: 25, carbs: 58, fat: 18 },
-      { id: 8, name: "Salat med kylling", calories: 320, protein: 28, carbs: 12, fat: 18 },
-    ]
-
-    const filtered = mockFoods.filter((food) => food.name.toLowerCase().includes(autoFillQuery.toLowerCase()))
-
-    setAutoFillResults(filtered.length > 0 ? filtered : mockFoods.slice(0, 4))
-    setIsSearchingAutoFill(false)
+    try {
+      const res = await fetch(`/api/food-search?q=${encodeURIComponent(autoFillQuery)}`)
+      const data = await res.json()
+      setAutoFillResults(data.products || [])
+    } catch {
+      setAutoFillResults([])
+    } finally {
+      setIsSearchingAutoFill(false)
+    }
   }
 
   const handleSubmit = async () => {

@@ -10,10 +10,16 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "NutriSense - AI-Powered Nutrition Tracking",
+  title: "NutriSense – Helse og ernæring",
   description:
-    "Track your nutrition effortlessly with AI-powered meal analysis, discover personalized recipes, and connect with a supportive wellness community.",
+    "Spor måltid, aktivitet og helse med AI-analyse. Last opp bilete av maten din og få næringsinnhald på sekundet.",
   generator: "v0.app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "NutriSense",
+  },
   icons: {
     icon: [
       {
@@ -39,7 +45,7 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="no">
       <body className={`font-sans antialiased`}>
         <LanguageProvider>
           <TopNav />

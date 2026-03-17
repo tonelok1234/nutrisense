@@ -1,6 +1,9 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { openai } from "@ai-sdk/openai"
+import { generateObject } from "ai"
+import { z } from "zod"
 
 const PROTOTYPE_MODE = false
 
@@ -161,9 +164,6 @@ export async function analyzeMealPhoto({
       analysis = getMockAnalysis(description)
     } else {
       // Real AI analysis would go here
-      const { generateObject } = await import("ai")
-      const { z } = await import("zod")
-
       const mealAnalysisSchema = z.object({
         items: z.array(
           z.object({
@@ -194,44 +194,31 @@ export async function analyzeMealPhoto({
         }
       }
 
-      const systemPrompt = `Du er ein ernæringsassistent. Analyser måltidet basert KUN på informasjonen som er gitt.
+      const userContent: any[] = [
+        {
+          type: "text",
+          text: description
+            ? `Analyser dette måltidet: ${description}`
+            : "Analyser måltidet på biletet.",
+        },
+      ]
+
+      if (photoData) {
+        userContent.push({ type: "image", image: photoData })
+      }
+
+      const result = await generateObject({
+        model: openai("gpt-4o"),
+        schema: mealAnalysisSchema,
+        system: `Du er ein ernæringsassistent. Analyser måltidet basert KUN på informasjonen som er gitt.
 
 VIKTIGE REGLAR:
 1. IKKJE dikta opp mengder eller ingrediensar som ikkje er nemnt
 2. Om mengde ikkje er oppgitt, set quantity til "ukjent mengde" og bruk gjennomsnittlege verdiar for ein typisk porsjon
 3. Om du er usikker, set health_score til 5 og skriv i recommendations at meir detaljert logging vil gi betre analyse
 4. Berre inkluder ingrediensar som er eksplisitt nemnt eller tydeleg synlege på biletet
-5. Svar alltid på norsk (nynorsk)`
-
-      const messages: any[] = [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: description 
-                ? `Analyser dette måltidet: ${description}` 
-                : "Analyser måltidet på biletet.",
-            },
-          ],
-        },
-      ]
-
-      if (photoData) {
-        messages[1].content.push({
-          type: "image",
-          image: photoData,
-        })
-      }
-
-      const result = await generateObject({
-        model: "openai/gpt-4o",
-        schema: mealAnalysisSchema,
-        messages,
+5. Svar alltid på norsk (nynorsk)`,
+        messages: [{ role: "user", content: userContent }],
       })
       analysis = result.object
       
@@ -263,8 +250,9 @@ VIKTIGE REGLAR:
 
     return { success: true, analysis, mealLog }
   } catch (error) {
-    console.error("[v0] Error analyzing meal:", error)
-    throw new Error("Failed to analyze meal")
+    const message = error instanceof Error ? error.message : String(error)
+    console.error("[v0] Error analyzing meal:", message)
+    throw new Error(message)
   }
 }
 
