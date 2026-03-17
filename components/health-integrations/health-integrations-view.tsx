@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -22,6 +22,8 @@ import {
   Footprints,
   Moon,
   Dumbbell,
+  RefreshCw,
+  LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -255,8 +257,66 @@ export default function HealthIntegrationsView() {
   const [integrations, setIntegrations] = useState(initialIntegrations)
   const [expandedId, setExpandedId] = useState<string | null>("apple-health")
   const [activeCategory, setActiveCategory] = useState<string>("wearables")
+  const [stravaAthleteName, setStravaAthleteName] = useState<string | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Check Strava connection status from database
+    fetch("/api/integrations")
+      .then(r => r.json())
+      .then((data: any[]) => {
+        const strava = data?.find((i: any) => i.integration_type === "strava" && i.is_active)
+        if (strava) {
+          setIntegrations(prev => prev.map(i =>
+            i.id === "strava" ? { ...i, connected: true } : i
+          ))
+          setStravaAthleteName(strava.settings?.athlete_name ?? null)
+        }
+      })
+      .catch(() => {})
+
+    // Handle callback params
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("strava_connected") === "1") {
+      setSyncMessage("Strava er no kopla til!")
+      setActiveCategory("fitness")
+      window.history.replaceState({}, "", window.location.pathname)
+    } else if (params.get("strava_error")) {
+      setSyncMessage(`Tilkopling feila: ${params.get("strava_error")}`)
+      window.history.replaceState({}, "", window.location.pathname)
+    }
+  }, [])
+
+  const handleStravaSync = async () => {
+    setIsSyncing(true)
+    setSyncMessage(null)
+    try {
+      const res = await fetch("/api/integrations/strava/sync", { method: "POST" })
+      const data = await res.json()
+      if (res.ok) {
+        setSyncMessage(`Synkronisert ${data.synced} nye aktivitetar`)
+      } else {
+        setSyncMessage(`Feil: ${data.error}`)
+      }
+    } catch {
+      setSyncMessage("Synkronisering feila")
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const handleStravaDisconnect = async () => {
+    await fetch("/api/integrations?type=strava", { method: "DELETE" })
+    setIntegrations(prev => prev.map(i =>
+      i.id === "strava" ? { ...i, connected: false } : i
+    ))
+    setStravaAthleteName(null)
+    setSyncMessage("Strava fråkopla")
+  }
 
   const toggleConnection = (integrationId: string) => {
+    if (integrationId === "strava") return // handled separately
     setIntegrations((prev) =>
       prev.map((integration) =>
         integration.id === integrationId ? { ...integration, connected: !integration.connected } : integration,
@@ -298,6 +358,11 @@ export default function HealthIntegrationsView() {
             {connectedCount} of {integrations.length} connected
           </Badge>
         </div>
+        {syncMessage && (
+          <div className="mt-3 text-sm px-3 py-2 rounded-md bg-primary/10 text-primary w-fit">
+            {syncMessage}
+          </div>
+        )}
       </div>
 
       <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-6">
@@ -347,11 +412,43 @@ export default function HealthIntegrationsView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <Switch
-                    checked={integration.connected}
-                    onCheckedChange={() => toggleConnection(integration.id)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
+                  {integration.id === "strava" ? (
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                      {integration.connected ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleStravaSync}
+                            disabled={isSyncing}
+                          >
+                            <RefreshCw className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")} />
+                            Synkroniser
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleStravaDisconnect}
+                          >
+                            <LogOut className="h-3 w-3 mr-1" />
+                            Koble frå
+                          </Button>
+                        </>
+                      ) : (
+                        <Button size="sm" asChild>
+                          <a href="/api/integrations/strava/connect">
+                            Koble til Strava
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <Switch
+                      checked={integration.connected}
+                      onCheckedChange={() => toggleConnection(integration.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
                   <ChevronRight
                     className={cn(
                       "h-5 w-5 text-muted-foreground transition-transform",
@@ -365,6 +462,11 @@ export default function HealthIntegrationsView() {
             {expandedId === integration.id && (
               <CardContent className="pt-0">
                 <div className="border-t pt-4">
+                  {integration.id === "strava" && stravaAthleteName && (
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Kopla til som: <span className="font-medium">{stravaAthleteName}</span>
+                    </p>
+                  )}
                   <h4 className="text-sm font-medium mb-3">Data Categories to Sync</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {integration.dataCategories.map((category) => (
