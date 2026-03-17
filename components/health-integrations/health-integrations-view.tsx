@@ -318,6 +318,7 @@ export default function HealthIntegrationsView() {
   const toggleConnection = (integrationId: string) => {
     if (integrationId === "strava") return // handled separately
     if (integrationId === "garmin") return // requires API approval
+    if (integrationId === "oura") return // requires Oura Ring
     setIntegrations((prev) =>
       prev.map((integration) =>
         integration.id === integrationId ? { ...integration, connected: !integration.connected } : integration,
@@ -419,6 +420,12 @@ export default function HealthIntegrationsView() {
                         Krev API-godkjenning
                       </Badge>
                     </div>
+                  ) : integration.id === "oura" ? (
+                    <div onClick={e => e.stopPropagation()}>
+                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                        Krev Oura Ring
+                      </Badge>
+                    </div>
                   ) : integration.id === "strava" ? (
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       {integration.connected ? (
@@ -480,6 +487,20 @@ export default function HealthIntegrationsView() {
                         className="underline font-medium"
                       >
                         Les meir om Garmin Developer Program →
+                      </a>
+                    </div>
+                  )}
+                  {integration.id === "oura" && (
+                    <div className="mb-4 p-3 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
+                      <p className="font-medium mb-1">Krev Oura Ring</p>
+                      <p className="mb-2">For å koble til Oura treng du ein fysisk Oura Ring og ein aktiv brukarkonto. Integrasjonen er klar til bruk når du skaffar deg ringen.</p>
+                      <a
+                        href="https://ouraring.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-medium"
+                      >
+                        Les meir om Oura Ring →
                       </a>
                     </div>
                   )}

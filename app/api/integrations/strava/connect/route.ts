@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
-  const clientId = process.env.STRAVA_CLIENT_ID
+  const clientId = process.env.STRAVA_CLIENT_ID?.trim()
   if (!clientId) {
     return NextResponse.json({ error: "STRAVA_CLIENT_ID mangler" }, { status: 500 })
   }
