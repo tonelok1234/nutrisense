@@ -14,7 +14,6 @@ import {
   HeartPulse,
   Activity,
   Watch,
-  Smartphone,
   Wifi,
   WifiOff,
   ChevronRight,
@@ -38,21 +37,6 @@ interface Integration {
 
 const initialIntegrations: Integration[] = [
   // Wearables
-  {
-    id: "apple-health",
-    name: "Apple Health",
-    description: "Import health metrics from your iPhone and Apple Watch",
-    icon: <Smartphone className="h-6 w-6" />,
-    connected: true,
-    category: "wearables",
-    dataCategories: [
-      { id: "steps", label: "Steps & Distance", enabled: true },
-      { id: "sleep", label: "Sleep Analysis", enabled: true },
-      { id: "nutrition", label: "Nutrition Data", enabled: false },
-      { id: "mindfulness", label: "Mindfulness Minutes", enabled: false },
-      { id: "heartrate", label: "Heart Rate", enabled: true },
-    ],
-  },
   {
     id: "garmin",
     name: "Garmin Connect",
@@ -94,20 +78,6 @@ const initialIntegrations: Integration[] = [
       { id: "recovery", label: "Recovery Score", enabled: true },
       { id: "sleep", label: "Sleep Performance", enabled: true },
       { id: "hrv", label: "HRV", enabled: true },
-    ],
-  },
-  {
-    id: "samsung-health",
-    name: "Samsung Health",
-    description: "Health data from Samsung Galaxy Watch and phones",
-    icon: <Watch className="h-6 w-6" />,
-    connected: false,
-    category: "wearables",
-    dataCategories: [
-      { id: "steps", label: "Steps & Activity", enabled: true },
-      { id: "sleep", label: "Sleep Tracking", enabled: true },
-      { id: "heartrate", label: "Heart Rate", enabled: true },
-      { id: "stress", label: "Stress Levels", enabled: false },
     ],
   },
   {
@@ -235,7 +205,7 @@ export default function HealthIntegrationsView() {
   // Integrations with real OAuth flows
   const REAL_INTEGRATIONS = ["strava", "dexcom"]
   // Integrations that require hardware/subscription (placeholders)
-  const PLACEHOLDER_INTEGRATIONS = ["garmin", "oura", "whoop", "stelo"]
+  const PLACEHOLDER_INTEGRATIONS = ["garmin", "oura", "whoop", "stelo", "withings"]
 
   const SYNC_LABELS: Record<string, string> = {
     strava: "aktivitetar",
@@ -411,6 +381,7 @@ export default function HealthIntegrationsView() {
                         {integration.id === "garmin" ? "Krev API-godkjenning"
                           : integration.id === "oura" ? "Krev Oura Ring"
                           : integration.id === "whoop" ? "Krev WHOOP"
+                          : integration.id === "withings" ? "Kjem snart"
                           : "Krev Stelo-sensor"}
                       </Badge>
                     </div>
@@ -481,6 +452,20 @@ export default function HealthIntegrationsView() {
                         className="underline font-medium"
                       >
                         Les meir om {integration.id === "whoop" ? "WHOOP" : "Stelo"} →
+                      </a>
+                    </div>
+                  )}
+                  {integration.id === "withings" && (
+                    <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
+                      <p className="font-medium mb-1">Withings – kjem snart</p>
+                      <p className="mb-2">Withings har eit offentleg API og integrasjonen er under utvikling. Støttar smarte vekter, blodtrykksmålarar og søvnsporing.</p>
+                      <a
+                        href="https://www.withings.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-medium"
+                      >
+                        Les meir om Withings →
                       </a>
                     </div>
                   )}
