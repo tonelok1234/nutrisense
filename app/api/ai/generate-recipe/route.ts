@@ -1,6 +1,15 @@
 import { createClient } from "@/lib/supabase/server"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+import { checkRateLimit } from "@/lib/rate-limit"
+
+const generateRecipeSchema = z.object({
+  mealType: z.string().max(50).optional(),
+  diet: z.string().max(100).optional(),
+  excludeIngredients: z.array(z.string().max(100)).max(20).optional(),
+  preferences: z.string().max(500).optional(),
+})
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -10,8 +19,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { mealType, diet, excludeIngredients, preferences } = body
+  const rateLimit = checkRateLimit(user.id, 5, 60 * 60 * 1000)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "For mange førespurnader. Prøv igjen om ei stund." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) },
+      },
+    )
+  }
+
+  const rawBody = await request.json()
+  const parsed = generateRecipeSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const { mealType, diet, excludeIngredients, preferences } = parsed.data
 
   try {
     const prompt = `Generate a healthy recipe with the following requirements:

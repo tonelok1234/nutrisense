@@ -3,9 +3,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, Sparkles } from "lucide-react"
+import type { MealLog } from "@/lib/types"
 
 interface MealCardProps {
-  meal: any
+  meal: MealLog
 }
 
 export default function MealCard({ meal }: MealCardProps) {
@@ -70,7 +71,7 @@ export default function MealCard({ meal }: MealCardProps) {
             <div>
               <h4 className="font-semibold text-sm mb-2">Detected Foods:</h4>
               <ul className="space-y-1">
-                {analysis.items.map((item: any, index: number) => (
+                {analysis.items.map((item: { name: string; quantity?: string }, index: number) => (
                   <li key={index} className="text-sm text-muted-foreground">
                     • {item.name} {item.quantity && `(${item.quantity})`}
                   </li>

@@ -269,7 +269,7 @@ export default function HomePage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/analysis" className="text-gray-400 hover:text-white transition-colors">
+                  <Link href="/meal-analyzer" className="text-gray-400 hover:text-white transition-colors">
                     Analysis
                   </Link>
                 </li>

@@ -1,5 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+
+const upsertIntegrationSchema = z.object({
+  integration_type: z.string().min(1).max(100),
+  is_active: z.boolean().optional(),
+  settings: z.record(z.unknown()).optional(),
+})
 
 export async function GET() {
   const supabase = await createClient()
@@ -29,7 +36,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
+  const rawBody = await request.json()
+  const parsed = upsertIntegrationSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const body = parsed.data
 
   const { data, error } = await supabase
     .from("user_integrations")
@@ -37,7 +49,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       integration_type: body.integration_type,
       is_active: body.is_active ?? true,
-      settings: body.settings || {},
+      settings: body.settings ?? {},
       last_synced_at: new Date().toISOString(),
     }, {
       onConflict: "user_id,integration_type"

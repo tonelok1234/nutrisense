@@ -1,5 +1,23 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+
+const mealItemSchema = z.object({
+  food_item_id: z.string().uuid().optional().nullable(),
+  quantity: z.number().positive(),
+  unit: z.string().min(1).max(50),
+  manual_entry: z.record(z.unknown()).optional().nullable(),
+})
+
+const createMealSchema = z.object({
+  meal_type: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+  meal_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  meal_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+  photo_url: z.string().url().optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
+  ai_analysis: z.record(z.unknown()).optional().nullable(),
+  items: z.array(mealItemSchema).optional(),
+})
 
 export async function GET() {
   const supabase = await createClient()
@@ -37,8 +55,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { meal_type, meal_date, meal_time, photo_url, notes, ai_analysis, items } = body
+  const rawBody = await request.json()
+  const parsed = createMealSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const { meal_type, meal_date, meal_time, photo_url, notes, ai_analysis, items } = parsed.data
 
   // Create meal log
   const { data: mealLog, error: mealError } = await supabase
@@ -61,7 +83,7 @@ export async function POST(request: Request) {
 
   // Add meal items if provided
   if (items && items.length > 0) {
-    const mealItems = items.map((item: any) => ({
+    const mealItems = items.map((item) => ({
       meal_log_id: mealLog.id,
       food_item_id: item.food_item_id || null,
       quantity: item.quantity,

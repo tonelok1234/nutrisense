@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+
+const createSymptomSchema = z.object({
+  description: z.string().min(1).max(1000),
+  severity: z.number().int().min(1).max(10).optional(),
+  image_url: z.string().url().optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
+})
 
 export async function GET() {
   const supabase = await createClient()
@@ -30,8 +38,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { description, severity, image_url, notes } = body
+  const rawBody = await request.json()
+  const parsed = createSymptomSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const { description, severity, image_url, notes } = parsed.data
 
   const { data, error } = await supabase
     .from("symptom_logs")

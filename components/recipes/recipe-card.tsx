@@ -8,15 +8,22 @@ import Link from "next/link"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import type { Recipe } from "@/lib/types"
+
+interface RecipeWithMeta extends Recipe {
+  favorite_recipes?: Array<{ user_id: string }>
+  recipe_likes?: Array<{ count: number }>
+  profiles?: { full_name: string | null } | null
+}
 
 interface RecipeCardProps {
-  recipe: any
+  recipe: RecipeWithMeta
   userId: string
 }
 
 export default function RecipeCard({ recipe, userId }: RecipeCardProps) {
   const [isFavorited, setIsFavorited] = useState(
-    recipe.favorite_recipes?.some((f: any) => f.user_id === userId) || false,
+    recipe.favorite_recipes?.some((f) => f.user_id === userId) || false,
   )
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()

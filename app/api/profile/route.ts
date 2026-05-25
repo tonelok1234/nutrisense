@@ -1,5 +1,18 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+
+const updateProfileSchema = z.object({
+  full_name: z.string().max(200).optional().nullable(),
+  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  height_cm: z.number().positive().max(300).optional().nullable(),
+  weight_kg: z.number().positive().max(500).optional().nullable(),
+  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional().nullable(),
+  activity_level: z.enum(["sedentary", "lightly_active", "moderately_active", "very_active", "extra_active"]).optional().nullable(),
+  dietary_preferences: z.array(z.string()).optional().nullable(),
+  health_goals: z.array(z.string()).optional().nullable(),
+  allergies: z.array(z.string()).optional().nullable(),
+})
 
 export async function GET() {
   const supabase = await createClient()
@@ -30,7 +43,12 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
+  const rawBody = await request.json()
+  const parsed = updateProfileSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const body = parsed.data
 
   const { data, error } = await supabase
     .from("profiles")

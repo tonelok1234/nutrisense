@@ -1,5 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+
+const createMedicationSchema = z.object({
+  name: z.string().min(1).max(200),
+  dosage: z.string().max(200).optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
+})
 
 export async function GET() {
   const supabase = await createClient()
@@ -30,8 +37,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { name, dosage, notes } = body
+  const rawBody = await request.json()
+  const parsed = createMedicationSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const { name, dosage, notes } = parsed.data
 
   const { data, error } = await supabase
     .from("medication_logs")

@@ -1,40 +1,37 @@
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
 import ProfileView from "@/components/profile/profile-view"
 
-const mockUser = {
-  id: "mock-user-123",
-  email: "demo@nutrisense.com",
-}
-
-const mockProfile = {
-  id: "mock-user-123",
-  full_name: "Demo User",
-  bio: "Health enthusiast exploring NutriSense and living a balanced lifestyle",
-  avatar_url: null,
-  dietary_preferences: ["vegetarian", "gluten_free"],
-  allergies: ["nuts"],
-  health_goals: ["weight_loss", "more_energy", "better_sleep"],
-  created_at: new Date().toISOString(),
-}
-
-const mockGoals = {
-  user_id: "mock-user-123",
-  daily_calories: 2000,
-  daily_protein: 150,
-  daily_carbs: 200,
-  daily_fat: 65,
-  daily_water_ml: 2000,
-}
-
 export default async function ProfilePage() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect("/auth/login")
+  }
+
+  const [profileResult, goalsResult, recipesCountResult] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
+    supabase.from("nutritional_goals").select("*").eq("user_id", user.id).single(),
+    supabase.from("recipes").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+  ])
+
+  const profile = profileResult.data ?? null
+  const goals = goalsResult.data ?? null
+  const recipesCount = recipesCountResult.count ?? 0
+
   return (
     <ProfileView
-      user={mockUser}
-      profile={mockProfile}
-      goals={mockGoals}
+      user={user}
+      profile={profile}
+      goals={goals}
       stats={{
-        recipes: 5,
-        following: 12,
-        followers: 8,
+        recipes: recipesCount,
+        following: 0,
+        followers: 0,
       }}
     />
   )

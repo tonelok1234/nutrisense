@@ -28,11 +28,12 @@ import { languages, type Language } from "@/lib/i18n/translations"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { Wifi, WifiOff } from "lucide-react"
+import type { User, Profile, UserGoals } from "@/lib/types"
 
 interface ProfileViewProps {
-  user: any
-  profile: any
-  goals: any
+  user: User
+  profile: Profile | null
+  goals: UserGoals | null
   stats: {
     recipes: number
     following: number

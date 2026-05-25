@@ -1,5 +1,22 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+
+const createRecipeSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).optional().nullable(),
+  ingredients: z.array(z.record(z.unknown())).min(1),
+  instructions: z.array(z.string()).min(1),
+  prep_time_minutes: z.number().int().nonnegative().optional().nullable(),
+  cook_time_minutes: z.number().int().nonnegative().optional().nullable(),
+  servings: z.number().int().positive().optional().nullable(),
+  nutritional_info: z.record(z.unknown()).optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+  difficulty: z.enum(["easy", "medium", "hard"]).optional().nullable(),
+  photo_url: z.string().url().optional().nullable(),
+  is_ai_generated: z.boolean().optional(),
+  is_public: z.boolean().optional(),
+})
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -52,7 +69,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
+  const rawBody = await request.json()
+  const parsed = createRecipeSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const body = parsed.data
 
   const { data, error } = await supabase
     .from("recipes")
@@ -69,8 +91,8 @@ export async function POST(request: Request) {
       tags: body.tags,
       difficulty: body.difficulty,
       photo_url: body.photo_url,
-      is_ai_generated: body.is_ai_generated || false,
-      is_public: body.is_public || false,
+      is_ai_generated: body.is_ai_generated ?? false,
+      is_public: body.is_public ?? false,
     })
     .select()
     .single()

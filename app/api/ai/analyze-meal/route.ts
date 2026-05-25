@@ -1,6 +1,16 @@
 import { createClient } from "@/lib/supabase/server"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
+import { z } from "zod"
+import { checkRateLimit } from "@/lib/rate-limit"
+
+const analyzeMealSchema = z.object({
+  description: z.string().min(1).max(2000).optional(),
+  imageUrl: z.string().url().optional(),
+  diet: z.string().max(100).optional(),
+}).refine((data) => data.description || data.imageUrl, {
+  message: "Either description or imageUrl is required",
+})
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -10,8 +20,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { description, imageUrl, diet } = body
+  const rateLimit = checkRateLimit(user.id, 10, 60 * 60 * 1000)
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "For mange førespurnader. Prøv igjen om ei stund." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) },
+      },
+    )
+  }
+
+  const rawBody = await request.json()
+  const parsed = analyzeMealSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  }
+  const { description, imageUrl, diet } = parsed.data
 
   try {
     const prompt = `Analyze this meal and provide nutritional information.
